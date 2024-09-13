@@ -1,4 +1,5 @@
-pip install assemblyai google-generativeai
+pip install assemblyai 
+google-generativeai
 pip install streamlit
 pip install moviepy
 
