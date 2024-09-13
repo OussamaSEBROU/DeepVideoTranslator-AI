@@ -1,7 +1,7 @@
-pip install assemblyai 
+assemblyai 
 google-generativeai
-pip install streamlit
-pip install moviepy
+streamlit
+moviepy
 
 
 sudo apt-get install tesseract-ocr-eng
