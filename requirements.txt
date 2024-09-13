@@ -1,0 +1,24 @@
+pip install assemblyai google-generativeai
+pip install streamlit
+pip install moviepy
+
+
+sudo apt-get install tesseract-ocr-eng
+sudo apt-get install tesseract-ocr-ara
+sudo apt-get install tesseract-ocr-fra
+sudo apt-get install tesseract-ocr-chi_sim
+sudo apt-get install tesseract-ocr-deu
+sudo apt-get install tesseract-ocr-spa
+sudo apt-get install tesseract-ocr-jpn
+sudo apt-get install tesseract-ocr-hin
+sudo apt-get install tesseract-ocr-ita
+sudo apt-get install tesseract-ocr-kor
+sudo apt-get install tesseract-ocr-por
+sudo apt-get install tesseract-ocr-rus
+sudo apt-get install tesseract-ocr-swe
+sudo apt-get install tesseract-ocr-tur
+sudo apt-get install tesseract-ocr-vie
+sudo apt-get install tesseract-ocr-deu
+sudo apt-get install tesseract-ocr-vie
+
+
