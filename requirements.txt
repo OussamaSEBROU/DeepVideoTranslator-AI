@@ -3,3 +3,4 @@ assemblyai
 google-generativeai
 moviepy
 pytesseract
+langdetect
