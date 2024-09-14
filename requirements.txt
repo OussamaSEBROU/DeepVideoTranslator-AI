@@ -1,5 +1,5 @@
-streamlit==1.28.0
-assemblyai==0.20.0
-google-generativeai==0.3.2
-moviepy==1.0.3
-pytesseract==0.3.10
+streamlit
+assemblyai
+google-generativeai
+moviepy
+pytesseract
