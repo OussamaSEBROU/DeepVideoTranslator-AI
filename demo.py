@@ -10,8 +10,8 @@ import random
 import langdetect
 
 # Set up API keys (consider using environment variables for security)
-ASSEMBLYAI_API_KEY = "6d9429f7fc9944788699a222b13c6378"
-GEMINI_API_KEY = "AIzaSyA557kuj8o_kSfQSmtYBUKFoX_7dvj_HiQ"
+ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Initialize AssemblyAI
 aai.settings.api_key = ASSEMBLYAI_API_KEY
