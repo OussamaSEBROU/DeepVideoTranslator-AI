@@ -244,8 +244,7 @@ def main():
                     2. Download both the original video and the subtitle file you want to use.
                     3. Place both files in the folder you created. Make sure they have the same name (except for the file extension).
                     4. To watch with subtitles:
-                       - Use VLC Media Player: Open the video, right-click > Subtitles > Add Subtitle File, and select the .srt file.
-                       - Use Windows Media Player: It should automatically detect the subtitle file if it's in the same folder and has the same name as the video.
+                       - Use VLC Media Player: It should automatically detect the subtitle file if it's in the same folder and has the same name as the video.
                     5. Enjoy your video with translated subtitles!
                     """)
 
