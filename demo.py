@@ -142,6 +142,7 @@ def main():
         """)
         
     with st.sidebar.expander("About"):
+        st.markdown("This app was developed by Mr. Oussama SEBROU")
         st.markdown("""
         ### Multi-Language Video Subtitle Translator
 
