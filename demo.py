@@ -51,7 +51,7 @@ def check_video_duration(video_file):
     video.close()
     os.unlink(tmp_file_path)
 
-    return duration <= 600  # 600 seconds = 10 minutes
+    return duration <= 800  # 600 seconds = 10 minutes
 
 def transcribe_video(video_file):
     """
