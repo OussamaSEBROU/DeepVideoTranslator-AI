@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Install system dependencies and Tesseract OCR languages
 RUN apt-get update && apt-get install -y \
+    ffmpeg \
     tesseract-ocr \
     libtesseract-dev \
     tesseract-ocr-eng \
