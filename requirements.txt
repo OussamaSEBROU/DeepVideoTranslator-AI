@@ -4,3 +4,6 @@ google-generativeai
 moviepy
 langdetect
 pytube
+pytesseract
+python-multipart
+numpy
