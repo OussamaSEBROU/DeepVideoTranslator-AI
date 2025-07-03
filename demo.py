@@ -189,7 +189,7 @@ def burn_subtitles_into_video(video_path, subtitle_path, output_path):
     command = [
         "ffmpeg",
         "-i", video_path,
-        "-vf", f"subtitles='{subtitle_path.replace('\\', '/')}'", # Use forward slashes for ffmpeg path
+        "-vf", f'subtitles="{subtitle_path.replace("\\\\", "/")}"'
         "-c:a", "copy",
         output_path
     ]
