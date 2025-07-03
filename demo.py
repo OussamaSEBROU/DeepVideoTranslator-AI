@@ -1,3 +1,4 @@
+
 import streamlit as st
 import os
 import assemblyai as aai
@@ -5,9 +6,9 @@ import google.generativeai as genai
 from tempfile import NamedTemporaryFile
 import base64
 import streamlit.components.v1 as components
-from moviepy.editor import VideoFileClip
 import random
 import langdetect
+import subprocess
 
 # Set up API keys (consider using environment variables for security)
 ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
@@ -40,16 +41,22 @@ LANGUAGES = {
 
 def check_video_duration(video_file):
     """
-    Check if the video duration is 10 minutes or less
+    Check if the video duration is 10 minutes or less using ffprobe
     """
     with NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
         tmp_file.write(video_file.getvalue())
         tmp_file_path = tmp_file.name
 
-    video = VideoFileClip(tmp_file_path)
-    duration = video.duration
-    video.close()
-    os.unlink(tmp_file_path)
+    try:
+        command = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
+                   "default=noprint_wrappers=1:nokey=1", tmp_file_path]
+        duration_str = subprocess.check_output(command).decode().strip()
+        duration = float(duration_str)
+    except Exception as e:
+        st.error(f"Error getting video duration: {e}")
+        duration = 0
+    finally:
+        os.unlink(tmp_file_path)
 
     return duration <= 800  # 600 seconds = 10 minutes
 
@@ -80,7 +87,7 @@ def translate_content(content, target_language):
     """
     Translate the content to the target language using Google Gemini
     """
-    prompt = f"""Translate the following text to professional with high accuracy of understand context {target_language}. Keep all numbers, punctuation, and special characters unchanged. Only translate the words:
+    prompt = f"""translate the full text to the {target_language} with professional like translator professional. Keep all numbers, punctuation, and special characters unchanged. Only translate the words:
 
 {content}
 
@@ -105,6 +112,24 @@ Translated text:"""
     )
 
     return response.text
+
+def burn_subtitles_into_video(video_path, subtitle_path, output_path):
+    """
+    Burns subtitles into a video using ffmpeg.
+    """
+    command = [
+        "ffmpeg",
+        "-i", video_path,
+        "-vf", f"subtitles={subtitle_path}",
+        "-c:a", "copy",
+        output_path
+    ]
+    try:
+        subprocess.run(command, check=True, capture_output=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        st.error(f"Error burning subtitles: {e.stderr.decode()}")
+        return False
 
 def get_binary_file_downloader_html(bin_file, file_label='File'):
     with open(bin_file, 'rb') as f:
@@ -200,7 +225,7 @@ def main():
                 with st.spinner(f"Processing video and translating to {target_language}... This may take a while."):
                     # Display random wisdoms during processing
                     wisdom_placeholder = st.empty()
-                    for _ in range(30):  # Display 30 wisdoms
+                    for _ in range(5):  # Display fewer wisdoms for faster processing
                         wisdom_placeholder.info(f"While you wait... {get_random_wisdom()}")
                         #st.sleep(3)  # Wait for 3 seconds before showing the next wisdom
 
@@ -226,16 +251,29 @@ def main():
                     with open(translated_subtitle_file, "w", encoding="utf-8") as f:
                         f.write(translated_subtitles)
 
+                    # Burn subtitles into video
+                    video_temp_path = NamedTemporaryFile(delete=False, suffix='.mp4').name
+                    with open(video_temp_path, "wb") as f:
+                        f.write(uploaded_file.getvalue())
+
+                    output_video_file = f"{file_name}_translated.mp4"
+                    if burn_subtitles_into_video(video_temp_path, translated_subtitle_file, output_video_file):
+                        st.success("Subtitles successfully burned into the video!")
+                    else:
+                        st.error("Failed to burn subtitles into the video.")
+                    os.unlink(video_temp_path)
+
                     wisdom_placeholder.empty()  # Remove the wisdom messages
                     st.success("Processing complete!")
 
                     # Download buttons
                     st.markdown(get_binary_file_downloader_html(original_subtitle_file, "Original Subtitles"), unsafe_allow_html=True)
                     st.markdown(get_binary_file_downloader_html(translated_subtitle_file, f"{target_language} Subtitles"), unsafe_allow_html=True)
+                    st.markdown(get_binary_file_downloader_html(output_video_file, "Video with Translated Subtitles"), unsafe_allow_html=True)
 
                     # Display video with subtitles
                     st.subheader("Video Preview with Subtitles")
-                    st.video(uploaded_file, subtitles=translated_subtitle_file)
+                    st.video(output_video_file)
 
                     # Instructions for offline viewing
                     st.markdown("""
@@ -259,3 +297,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
