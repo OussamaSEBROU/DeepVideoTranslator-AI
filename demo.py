@@ -19,7 +19,7 @@ aai.settings.api_key = ASSEMBLYAI_API_KEY
 
 # Initialize Google Gemini
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-2.0-flash') 
 
 # Define supported languages
 LANGUAGES = {
