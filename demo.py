@@ -1,12 +1,11 @@
 import streamlit as st
 import google.generativeai as genai
 import pytube
-import srt
 import textwrap
 import time
 
 # --- Configuration and API Key Handling ---
-st.set_page_page_config(
+st.set_page_config(
     page_title="Gemini-Powered YouTube Translator",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -39,8 +38,7 @@ into different languages using the Gemini API.
 3.  Select a target language.
 4.  The app processes the video's audio to generate a transcript (simplified for this demo).
 5.  The transcript is sent to the Gemini API for translation.
-6.  The translated text is used to create a synchronized subtitle file (`.srt`).
-7.  You can view the translated content and download the subtitle file.
+6.  The translated text is then displayed on the screen.
 """
 )
 
@@ -50,8 +48,6 @@ st.sidebar.markdown(
 -   The Gemini API is used for text translation, not for audio transcription.
 -   The transcription part is a simplified placeholder. For a real-world application,
     you would use a dedicated ASR (Automatic Speech Recognition) service.
--   Subtitles are displayed below the video, as native overlay is not supported
-    by Streamlit's video player.
 """
 )
 
@@ -70,7 +66,6 @@ def get_video_info(url):
     """
     try:
         yt = pytube.YouTube(url)
-        # Attempt to get a progressive MP4 stream with the highest resolution
         return yt.title, yt.video_id, yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first().url
     except Exception as e:
         st.error(f"Could not retrieve video information. Please check the URL. Error: {e}")
@@ -96,26 +91,6 @@ def translate_text_with_gemini(text_to_translate, target_language):
     except Exception as e:
         st.error(f"Translation failed. Please try again. Error: {e}")
         return None
-
-
-def generate_srt_content(translated_segments, source_segments, segment_duration=5):
-    """
-    Generates SRT content from translated segments and simple timestamp segments.
-    In a real-world app, segments would come from the transcription service.
-    """
-    subs = []
-    start_time_seconds = 0
-    for i, segment in enumerate(translated_segments):
-        start_time_ms = int(start_time_seconds * 1000)
-        end_time_ms = int((start_time_seconds + segment_duration) * 1000)
-        
-        start_time_s = time.strftime('%H:%M:%S', time.gmtime(start_time_seconds)) + f',{start_time_ms % 1000:03}'
-        end_time_s = time.strftime('%H:%M:%S', time.gmtime(start_time_seconds + segment_duration)) + f',{end_time_ms % 1000:03}'
-        
-        subs.append(srt.Subtitle(index=i+1, start=srt.get_timedelta(start_time_s), end=srt.get_timedelta(end_time_s), content=segment))
-        start_time_seconds += segment_duration
-    
-    return srt.compose(subs)
 
 
 # --- Input Fields for URL and Language ---
@@ -146,7 +121,6 @@ if st.button("Translate & Generate"):
             # Step 1: Get video information
             title, video_id, video_url = get_video_info(youtube_url)
             if not video_id:
-                # Error message is already displayed by get_video_info
                 st.stop()
 
             # --- Mock Transcription (as Gemini doesn't do ASR) ---
@@ -161,17 +135,16 @@ if st.button("Translate & Generate"):
             segments_to_translate = textwrap.wrap(mock_transcript_raw, 80)
             
             # Step 2: Translate the segments
-            translated_segments = []
+            translated_text_list = []
             for segment in segments_to_translate:
                 translated_segment = translate_text_with_gemini(segment, target_language)
                 if translated_segment:
-                    translated_segments.append(translated_segment)
+                    translated_text_list.append(translated_segment)
 
-            if translated_segments:
-                # Step 3: Generate the SRT file content
-                srt_content = generate_srt_content(translated_segments, segments_to_translate)
+            if translated_text_list:
+                translated_text = " ".join(translated_text_list)
                 
-                st.success("Translation and subtitle generation complete!")
+                st.success("Translation complete!")
                 
                 # --- Output Section ---
                 st.subheader("Original Video")
@@ -179,21 +152,12 @@ if st.button("Translate & Generate"):
                 
                 st.subheader(f"Translated Content ({target_language})")
                 
-                # Display the translated subtitles below the video
+                # Display the translated text
                 st.text_area(
-                    "Translated Subtitles",
-                    value=srt.compose(srt.parse(srt_content)),
+                    "Translated Text",
+                    value=translated_text,
                     height=200,
-                    help="This is the translated text, formatted as subtitles.",
+                    help="This is the translated text from the video.",
                     disabled=True
-                )
-                
-                # Step 4: Provide a downloadable file
-                st.download_button(
-                    label="Download SRT File",
-                    data=srt_content,
-                    file_name=f"{video_id}-{target_language}.srt",
-                    mime="application/x-subrip",
-                    help="Click to download the generated subtitle file."
                 )
 
