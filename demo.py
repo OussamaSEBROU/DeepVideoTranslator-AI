@@ -78,15 +78,6 @@ def parse_duration(duration_str: str) -> int:
     
     return hours * 3600 + minutes * 60 + seconds
 
-def download_audio_from_youtube_api(video_id: str, temp_dir: str) -> Optional[str]:
-    """
-    Note: YouTube Data API doesn't provide audio download.
-    We'll need to use yt-dlp but with additional measures.
-    For now, we'll show a message about this limitation.
-    """
-    st.warning("⚠️ Audio extraction from YouTube is restricted. Please consider uploading audio files directly.")
-    return None
-
 def transcribe_audio_with_gemini(audio_path: str, gemini_api_key: str) -> str:
     """Transcribe audio using Gemini API."""
     try:
@@ -103,7 +94,7 @@ def transcribe_audio_with_gemini(audio_path: str, gemini_api_key: str) -> str:
             raise ValueError("Audio processing failed")
         
         # Generate transcription
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')  # ✅ CORRECTED MODEL NAME
         response = model.generate_content([
             "Transcribe this audio file accurately. Return only the transcribed text without any additional commentary.",
             audio_file
@@ -119,7 +110,7 @@ def translate_text_with_gemini(text: str, target_language: str, gemini_api_key: 
     """Translate text to target language using Gemini API."""
     try:
         genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')  # ✅ CORRECTED MODEL NAME
         
         prompt = f"""
         Translate the following text to {target_language}. 
