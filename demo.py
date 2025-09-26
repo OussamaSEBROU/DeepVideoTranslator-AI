@@ -5,13 +5,13 @@ import requests
 import json
 from pathlib import Path
 import re
-from typing import List, Tuple, Optional
+from typing import Optional
 import google.generativeai as genai
 from datetime import timedelta
 
 # Configure page layout
 st.set_page_config(
-    page_title="YouTube Translator & Subtitle Generator",
+    page_title="YouTube URL Translator",
     page_icon="🎥",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -58,7 +58,6 @@ def extract_video_info_with_api(video_id: str, api_key: str) -> dict:
                 'uploader': item['snippet']['channelTitle']
             }
         else:
-            st.error("Video not found or invalid video ID")
             return {}
     except Exception as e:
         st.error(f"YouTube API Error: {str(e)}")
@@ -78,71 +77,58 @@ def parse_duration(duration_str: str) -> int:
     
     return hours * 3600 + minutes * 60 + seconds
 
-def transcribe_audio_with_gemini(audio_path: str, gemini_api_key: str) -> str:
-    """Transcribe audio using Gemini API."""
+def process_youtube_url_with_gemini(youtube_url: str, target_language: str, gemini_api_key: str) -> str:
+    """
+    Pass YouTube URL directly to Gemini API as part of the request.
+    Note: Gemini will treat this as text input, not actual video processing.
+    """
     try:
         genai.configure(api_key=gemini_api_key)
-        
-        # Upload audio file to Gemini
-        audio_file = genai.upload_file(path=audio_path)
-        
-        # Wait for processing
-        while audio_file.state.name == "PROCESSING":
-            audio_file = genai.get_file(audio_file.name)
-        
-        if audio_file.state.name == "FAILED":
-            raise ValueError("Audio processing failed")
-        
-        # Generate transcription
-        model = genai.GenerativeModel('gemini-2.5-flash')  # ✅ CORRECTED MODEL NAME
-        response = model.generate_content([
-            "Transcribe this audio file accurately. Return only the transcribed text without any additional commentary.",
-            audio_file
-        ])
-        
-        return response.text.strip()
-        
-    except Exception as e:
-        st.error(f"Error transcribing audio: {str(e)}")
-        return ""
-
-def translate_text_with_gemini(text: str, target_language: str, gemini_api_key: str) -> str:
-    """Translate text to target language using Gemini API."""
-    try:
-        genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')  # ✅ CORRECTED MODEL NAME
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
-        Translate the following text to {target_language}. 
-        Maintain the original meaning and context.
-        Return only the translated text without any additional commentary or formatting.
+        You are given a YouTube video URL: {youtube_url}
         
-        Text to translate:
-        {text}
+        Please analyze this URL and provide a translation to {target_language} language.
+        Since you cannot access the actual video content directly, 
+        provide a general translation service description in {target_language}.
+        
+        If you had access to the video content, you would:
+        1. Extract and transcribe the audio content
+        2. Translate the transcription to {target_language} with high accuracy and contextual understanding
+        3. Generate properly formatted subtitles
+        
+        For now, demonstrate your translation capability by providing a sample translation 
+        in {target_language} that shows what the output would look like.
+        
+        Return only the translated content without any additional commentary.
         """
         
         response = model.generate_content(prompt)
         return response.text.strip()
         
     except Exception as e:
-        st.error(f"Error translating text: {str(e)}")
+        st.error(f"Error processing with Gemini: {str(e)}")
         return ""
 
 def generate_srt_subtitles(text: str, duration: int) -> str:
     """Generate basic SRT subtitle file from text."""
-    sentences = [s.strip() for s in text.split('.') if s.strip()]
+    import re
+    sentences = re.split(r'[.!?]+', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    
     if not sentences:
         sentences = [text]
     
     srt_content = []
-    segment_duration = duration / len(sentences) if sentences else duration
+    segment_duration = duration / len(sentences) if len(sentences) > 0 else duration
     
     for i, sentence in enumerate(sentences):
         if not sentence:
             continue
             
         start_time = i * segment_duration
-        end_time = (i + 1) * segment_duration
+        end_time = min((i + 1) * segment_duration, duration)
         
         def format_time(seconds):
             td = timedelta(seconds=seconds)
@@ -165,32 +151,32 @@ def main():
         ### How to use this app:
         
         1. **Enter YouTube URL**: Paste a valid YouTube video URL
-        2. **Select Language**: Choose your target translation language
+        2. **Select Language**: Choose your target translation language  
         3. **Click Process**: Press "Translate & Generate" to start
         4. **Download**: Get your translated subtitles as .srt file
         
-        ### Note:
-        Due to YouTube restrictions, audio extraction may not work reliably.
-        Consider uploading audio files directly for better results.
+        ### Important Note:
+        This app passes YouTube URLs directly to Gemini API.
+        Gemini will process the URL as text input and provide 
+        translated content based on its understanding.
+        
+        For actual video/audio processing, consider uploading 
+        audio files directly.
         """)
         
         st.markdown("---")
-        st.markdown("⚠️ **Note**: Processing time depends on video length. Please be patient!")
+        st.markdown("⚠️ **Limitation**: Gemini API cannot directly access YouTube video content from URLs.")
 
     # Main content
-    st.title("🎥 YouTube Translator & Subtitle Generator")
-    st.markdown("Transform YouTube videos into multilingual content with AI-powered translation")
+    st.title("🎥 YouTube URL Translator")
+    st.markdown("Pass YouTube URLs directly to Gemini API for translation")
     
     # Get API keys from environment variables
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     youtube_api_key = os.getenv("YOUTUBE_API_KEY")
     
     if not gemini_api_key:
-        st.error("❌ Gemini API key not found. Please configure it in Render environment variables.")
-        st.stop()
-    
-    if not youtube_api_key:
-        st.error("❌ YouTube API key not found. Please configure it in Render environment variables.")
+        st.error("❌ Gemini API key not found. Please configure GEMINI_API_KEY in Render environment variables.")
         st.stop()
     
     # Input section
@@ -227,38 +213,25 @@ def main():
             return
         
         try:
-            with st.spinner("Processing... This may take several minutes"):
-                # Extract video ID and info
-                video_id = extract_video_id_from_url(youtube_url)
-                if not video_id:
-                    st.error("Invalid YouTube URL")
-                    return
+            with st.spinner("Processing YouTube URL with Gemini API..."):
+                # Extract video info if YouTube API key is available
+                video_info = {}
+                if youtube_api_key:
+                    video_id = extract_video_id_from_url(youtube_url)
+                    if video_id:
+                        video_info = extract_video_info_with_api(video_id, youtube_api_key)
+                        st.session_state.video_info = video_info
                 
-                st.info("Extracting video information...")
-                video_info = extract_video_info_with_api(video_id, youtube_api_key)
-                st.session_state.video_info = video_info
-                
-                if not video_info:
-                    st.error("Failed to extract video information")
-                    return
-                
-                # Show video info but note audio limitation
-                st.warning("⚠️ **Important**: YouTube doesn't allow direct audio extraction through API. This app will attempt to process but may fail due to YouTube's restrictions.")
-                
-                # For now, we'll simulate with a message
-                # In a real implementation, you'd need to handle audio differently
-                st.info("Simulating transcription and translation...")
-                
-                # Mock processing (since we can't get actual audio)
-                mock_text = "This is a demonstration. Due to YouTube's restrictions on automated audio extraction, please consider uploading audio files directly for reliable results."
-                translated_text = translate_text_with_gemini(mock_text, target_language, gemini_api_key)
+                # Pass YouTube URL directly to Gemini (as requested)
+                st.info("Passing YouTube URL directly to Gemini API...")
+                translated_text = process_youtube_url_with_gemini(youtube_url, target_language, gemini_api_key)
                 
                 if not translated_text:
-                    st.error("Failed to translate text")
+                    st.error("Failed to get translation from Gemini")
                     return
                 
                 # Generate subtitles
-                duration = video_info.get('duration', 300)
+                duration = video_info.get('duration', 300) if video_info else 300
                 subtitle_content = generate_srt_subtitles(translated_text, duration)
                 
                 st.session_state.translated_text = translated_text
@@ -274,20 +247,22 @@ def main():
     # Display results
     if st.session_state.processed:
         st.markdown("---")
-        st.subheader("🎬 Video Information")
         
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.session_state.video_info.get('thumbnail'):
-                st.image(st.session_state.video_info['thumbnail'], width=200)
-        
-        with col2:
-            st.markdown(f"**Title:** {st.session_state.video_info.get('title', 'N/A')}")
-            st.markdown(f"**Channel:** {st.session_state.video_info.get('uploader', 'N/A')}")
-            duration = st.session_state.video_info.get('duration', 0)
-            if duration > 0:
-                minutes, seconds = divmod(duration, 60)
-                st.markdown(f"**Duration:** {minutes}:{seconds:02d}")
+        # Display video info if available
+        if st.session_state.video_info:
+            st.subheader("🎬 Video Information")
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if st.session_state.video_info.get('thumbnail'):
+                    st.image(st.session_state.video_info['thumbnail'], width=200)
+            
+            with col2:
+                st.markdown(f"**Title:** {st.session_state.video_info.get('title', 'N/A')}")
+                st.markdown(f"**Channel:** {st.session_state.video_info.get('uploader', 'N/A')}")
+                duration = st.session_state.video_info.get('duration', 0)
+                if duration > 0:
+                    minutes, seconds = divmod(duration, 60)
+                    st.markdown(f"**Duration:** {minutes}:{seconds:02d}")
         
         st.markdown("---")
         st.subheader(f"🌍 Translated Content ({target_language})")
