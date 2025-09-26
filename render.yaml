@@ -1,11 +1,10 @@
 services:
   - type: web
-    name: subtitle-translator
-    env: docker
-    buildCommand: docker build -t subtitle-translator .
-    startCommand: docker run -p $PORT:8501 subtitle-translator
+    name: youtube-translator
+    env: python
+    region: oregon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"
     envVars:
-      - key: ASSEMBLYAI_API_KEY
-        sync: false
       - key: GEMINI_API_KEY
         sync: false
