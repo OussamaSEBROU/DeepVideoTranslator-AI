@@ -84,7 +84,7 @@ def process_youtube_url_with_gemini(youtube_url: str, target_language: str, gemi
     """
     try:
         genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         prompt = f"""
         You are given a YouTube video URL: {youtube_url}
